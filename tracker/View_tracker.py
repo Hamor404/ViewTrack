@@ -163,26 +163,6 @@ class STrack(BaseTrack):
         return ret
 
     @property
-    def tlbr_s(self):
-        ret = self.tlwh.copy()
-        ret[:2] += ret[2:] / 2.0
-        x1 = ret[0] - ret[2] / 2.0
-        y1 = ret[1] - ret[2] / 2.0
-        x2 = ret[0] + ret[2] / 2.0
-        y2 = ret[1] + ret[2] / 2.0
-        return np.array([x1, y1, x2, y2], dtype=float)
-
-    @property
-    def tlbr_wh(self):
-        ret = self.tlwh.copy()
-        ret[:2] += ret[2:] / 2.0
-        x1 = 0
-        y1 = ret[1] - ret[3] / 2.0
-        x2 = ret[0] + ret[2] / 2.0
-        y2 = ret[1] + ret[3] / 2.0
-        return np.array([x1, y1, x2, y2], dtype=float)
-
-    @property
     def xywh(self):
         """Convert bounding box to format `(min x, min y, max x, max y)`, i.e.,
         `(top left, bottom right)`.
@@ -478,7 +458,7 @@ class ViewTracker(object):
                         if view_type == 'front':
                             ious_dists = matching.iou_distance(track__, det__)
                         else:
-                            ious_dists = matching.h_displacement_iou_distance(track__, det__)
+                            ious_dists = matching.displacement_iou_distance(track__, det__)
                         ious_dists_mask = (ious_dists > self.proximity_thresh)
                         if (not self.args.mot20) and is_fuse:
                             ious_dists = matching.fuse_score(ious_dists, det__)

@@ -16,7 +16,7 @@ from yolox.utils import fuse_model, get_model_info, postprocess
 from yolox.utils.visualize import plot_tracking
 
 from tracker.tracking_utils.timer import Timer
-from tracker.bot_sort import BoTSORT
+from tracker.View_tracker import ViewTracker
 
 IMAGE_EXT = [".jpg", ".jpeg", ".webp", ".bmp", ".png"]
 
@@ -29,41 +29,56 @@ def make_parser():
     parser = argparse.ArgumentParser("BoT-SORT Tracks For Evaluation!")
 
     parser.add_argument("path", help="path to dataset under evaluation, currently only support MOT17 and MOT20.")
-    parser.add_argument("--benchmark", dest="benchmark", type=str, default='MOT17', help="benchmark to evaluate: MOT17 | MOT20")
-    parser.add_argument("--eval", dest="split_to_eval", type=str, default='test', help="split to evaluate: train | val | test")
+    parser.add_argument("--benchmark", dest="benchmark", type=str, default='MOT17',
+                        help="benchmark to evaluate: MOT17 | MOT20")
+    parser.add_argument("--eval", dest="split_to_eval", type=str, default='test',
+                        help="split to evaluate: train | val | test")
     parser.add_argument("-f", "--exp_file", default=None, type=str, help="pls input your expriment description file")
     parser.add_argument("-c", "--ckpt", default=None, type=str, help="ckpt for eval")
     parser.add_argument("-expn", "--experiment-name", type=str, default=None)
-    parser.add_argument("--default-parameters", dest="default_parameters", default=False, action="store_true", help="use the default parameters as in the paper")
-    parser.add_argument("--save-frames", dest="save_frames", default=False, action="store_true", help="save sequences with tracks.")
+    parser.add_argument("--default-parameters", dest="default_parameters", default=False, action="store_true",
+                        help="use the default parameters as in the paper")
+    parser.add_argument("--save-frames", dest="save_frames", default=False, action="store_true",
+                        help="save sequences with tracks.")
 
     # Detector
     parser.add_argument("--device", default="gpu", type=str, help="device to run our model, can either be cpu or gpu")
     parser.add_argument("--conf", default=None, type=float, help="test conf")
     parser.add_argument("--nms", default=None, type=float, help="test nms threshold")
     parser.add_argument("--tsize", default=None, type=int, help="test img size")
-    parser.add_argument("--fp16", dest="fp16", default=False, action="store_true", help="Adopting mix precision evaluating.")
+    parser.add_argument("--fp16", dest="fp16", default=False, action="store_true",
+                        help="Adopting mix precision evaluating.")
     parser.add_argument("--fuse", dest="fuse", default=False, action="store_true", help="Fuse conv and bn for testing.")
 
     # tracking args
     parser.add_argument("--track_high_thresh", type=float, default=0.6, help="tracking confidence threshold")
-    parser.add_argument("--track_low_thresh", default=0.1, type=float, help="lowest detection threshold valid for tracks")
-    parser.add_argument("--new_track_thresh", default=0.7, type=float, help="new track thresh")
+    parser.add_argument("--track_low_thresh", default=0.1, type=float,
+                        help="lowest detection threshold valid for tracks")
+    parser.add_argument("--new_track_thresh", default=0.65, type=float, help="new track thresh")
     parser.add_argument("--track_buffer", type=int, default=30, help="the frames for keep lost tracks")
-    parser.add_argument("--match_thresh", type=float, default=0.8, help="matching threshold for tracking")
-    parser.add_argument("--aspect_ratio_thresh", type=float, default=1.6, help="threshold for filtering out boxes of which aspect ratio are above the given value.")
+    parser.add_argument("--match_thresh", type=float, default=0.7,
+                        help="matching threshold for tracking(Too low will miss the correct match，Too high to increase false matches)")
+    parser.add_argument("--aspect_ratio_thresh", type=float, default=1.6,
+                        help="threshold for filtering out boxes of which aspect ratio are above the given value.")
     parser.add_argument('--min_box_area', type=float, default=10, help='filter out tiny boxes')
 
     # CMC
-    parser.add_argument("--cmc-method", default="file", type=str, help="cmc method: files (Vidstab GMC) | sparseOptFlow | orb | ecc | none")
+    parser.add_argument("--cmc-method", default="file", type=str,
+                        help="cmc method: files (Vidstab GMC) | sparseOptFlow | orb | ecc | none")
 
     # ReID
     parser.add_argument("--with-reid", dest="with_reid", default=False, action="store_true", help="use Re-ID flag.")
-    parser.add_argument("--fast-reid-config", dest="fast_reid_config", default=r"fast_reid/configs/MOT17/sbs_S50.yml", type=str, help="reid config file path")
-    parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default=r"pretrained/mot17_sbs_S50.pth", type=str, help="reid config file path")
-    parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting low overlap reid matches')
-    parser.add_argument('--appearance_thresh', type=float, default=0.25, help='threshold for rejecting low appearance similarity reid matches')
-
+    parser.add_argument("--fast-reid-config", dest="fast_reid_config", default=r"fast_reid/configs/MOT20/sbs_S50.yml",
+                        type=str, help="reid config file path")
+    parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default=r"pretrained/mot20_sbs_S50.pth",
+                        type=str, help="reid config file path")
+    parser.add_argument('--proximity_thresh', type=float, default=0.5)
+    parser.add_argument('--confirm_thresh', type=float, default=0.7)
+    parser.add_argument('--appearance_thresh', type=float, default=0.05, help='threshold for rejecting low appearance similarity reid matches')
+    parser.add_argument('--depth_levels', type=int, default=1)
+    parser.add_argument('--depth_levels_low', type=int, default=8)
+    parser.add_argument('--area_proportion', type=float, default=0.55)
+    parser.add_argument('--val_ann', type=str, default='val_half.json')
     return parser
 
 
@@ -154,7 +169,7 @@ def image_track(predictor, vis_folder, args):
     num_frames = len(files)
 
     # Tracker
-    tracker = BoTSORT(args, frame_rate=args.fps)
+    tracker = ViewTracker(args, frame_rate=args.fps)
 
     results = []
 
@@ -203,7 +218,8 @@ def image_track(predictor, vis_folder, args):
             cv2.imwrite(osp.join(save_folder, osp.basename(img_path)), online_im)
 
         if frame_id % 20 == 0:
-            logger.info('Processing frame {}/{} ({:.2f} fps)'.format(frame_id, num_frames, 1. / max(1e-5, timer.average_time)))
+            logger.info(
+                'Processing frame {}/{} ({:.2f} fps)'.format(frame_id, num_frames, 1. / max(1e-5, timer.average_time)))
 
     res_file = osp.join(vis_folder, args.name + ".txt")
 
@@ -320,9 +336,12 @@ if __name__ == "__main__":
             if args.default_parameters:
 
                 if MOT == 20:  # MOT20
-                    args.exp_file = r'./yolox/exps/example/mot/yolox_x_mix_mot20_ch.py'
-                    args.ckpt = r'./pretrained/bytetrack_x_mot20.tar'
-                    args.match_thresh = 0.7
+                    if ablation:
+                        args.exp_file = r'./yolox/exps/example/mot/yolox_x_mix_mot20_ch.py'
+                        args.ckpt = r'./pretrained/bytetrack_20_ablation.pth.tar'
+                    else:
+                        args.exp_file = r'./yolox/exps/example/mot/yolox_x_mix_mot20_ch.py'
+                        args.ckpt = r'./pretrained/bytetrack_x_mot20.tar'
                 else:  # MOT17
                     if ablation:
                         args.exp_file = r'./yolox/exps/example/mot/yolox_x_ablation.py'
@@ -337,26 +356,31 @@ if __name__ == "__main__":
                 args.track_low_thresh = 0.1
                 args.track_buffer = 30
 
-                if seq == 'MOT17-05-FRCNN' or seq == 'MOT17-06-FRCNN':
-                    args.track_buffer = 14
-                elif seq == 'MOT17-13-FRCNN' or seq == 'MOT17-14-FRCNN':
+                if seq == 'MOT17-05-FRCNN' or seq == 'MOT17-05-SDP' or seq == 'MOT17-05-DPM' or seq == 'MOT17-06-FRCNN' or seq == 'MOT17-06-SDP' or seq == 'MOT17-06-DPM':
+                    args.track_buffer = 30
+                elif seq == 'MOT17-13-FRCNN' or seq == 'MOT17-13-SDP' or seq == 'MOT17-13-DPM' or seq == 'MOT17-14-FRCNN' or seq == 'MOT17-14-SDP' or seq == 'MOT17-14-DPM':
                     args.track_buffer = 25
                 else:
                     args.track_buffer = 30
 
-                if seq == 'MOT17-01-FRCNN':
-                    args.track_high_thresh = 0.65
-                elif seq == 'MOT17-06-FRCNN':
-                    args.track_high_thresh = 0.65
-                elif seq == 'MOT17-12-FRCNN':
-                    args.track_high_thresh = 0.7
-                elif seq == 'MOT17-14-FRCNN':
-                    args.track_high_thresh = 0.67
-                elif seq in ['MOT20-06', 'MOT20-08']:
-                    args.track_high_thresh = 0.3
+                # if seq == 'MOT17-01-FRCNN':
+                #     args.track_high_thresh = 0.65
+                # elif seq == 'MOT17-06-FRCNN':
+                #     args.track_high_thresh = 0.65
+                # elif seq == 'MOT17-12-FRCNN':
+                #     args.track_high_thresh = 0.7
+                # elif seq == 'MOT17-14-FRCNN':
+                #     args.track_high_thresh = 0.67
+                if seq == 'MOT20-06':
+                    #args.track_high_thresh = 0.3
                     exp.test_size = (736, 1920)
-
-                args.new_track_thresh = args.track_high_thresh + 0.1
+                elif seq == 'MOT20-08':
+                    #args.track_high_thresh = 0.6
+                    exp.test_size = (736, 1920)
+                # elif seq == 'MOT20-04':
+                #     args.track_high_thresh = 0.6
+                # elif seq == 'MOT20-07':
+                #     args.track_high_thresh = 0.4
             else:
                 exp = get_exp(args.exp_file, args.name)
 
@@ -365,6 +389,6 @@ if __name__ == "__main__":
 
     mainTimer.toc()
     print("TOTAL TIME END-to-END (with loading networks and images): ", mainTimer.total_time)
-    print("TOTAL TIME (Detector + Tracker): " + str(timer.total_time) + ", FPS: " + str(1.0 /timer.average_time))
-    print("TOTAL TIME (Tracker only): " + str(trackerTimer.total_time) + ", FPS: " + str(1.0 / trackerTimer.average_time))
-
+    print("TOTAL TIME (Detector + Tracker): " + str(timer.total_time) + ", FPS: " + str(1.0 / timer.average_time))
+    print(
+        "TOTAL TIME (Tracker only): " + str(trackerTimer.total_time) + ", FPS: " + str(1.0 / trackerTimer.average_time))

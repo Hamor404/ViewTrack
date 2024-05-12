@@ -92,117 +92,7 @@ def iou_distance(atracks, btracks):
 
     return cost_matrix
 
-
-def s_iou_distance(atracks, btracks):
-    """
-    Compute cost based on IoU
-    :type atracks: list[STrack]
-    :type btracks: list[STrack]
-
-    :rtype cost_matrix np.ndarray
-    """
-
-    if (len(atracks) > 0 and isinstance(atracks[0], np.ndarray)) or (
-            len(btracks) > 0 and isinstance(btracks[0], np.ndarray)):
-        atlbrs = atracks
-        btlbrs = btracks
-    else:
-        atlbrs = [track.tlbr_s for track in atracks]
-        btlbrs = [track.tlbr_s for track in btracks]
-    _ious = ious(atlbrs, btlbrs)
-    cost_matrix = 1 - _ious
-
-    return cost_matrix
-
-
-def h_iou_distance(atracks, btracks):
-    """
-    Compute cost based on IoU
-    :type atracks: list[STrack]
-    :type btracks: list[STrack]
-
-    :rtype cost_matrix np.ndarray
-    """
-
-    if (len(atracks) > 0 and isinstance(atracks[0], np.ndarray)) or (
-            len(btracks) > 0 and isinstance(btracks[0], np.ndarray)):
-        atlbrs = atracks
-        btlbrs = btracks
-    else:
-        atlbrs = [track.tlbr for track in atracks]
-        btlbrs = [track.tlbr for track in btracks]
-    _ious = ious(atlbrs, btlbrs)
-    hious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float)
-    if hious.size != 0:
-        for i in range(len(atlbrs)):
-            for j in range(len(btlbrs)):
-                h_max = max(abs(atlbrs[i][1] - btlbrs[j][3]) + 1, abs(atlbrs[i][3] - btlbrs[j][1]) + 1)
-                h_min = min(abs(atlbrs[i][1] - btlbrs[j][3]) + 1, abs(atlbrs[i][3] - btlbrs[j][1]) + 1)
-                h_iou = h_min / h_max
-                hious[i][j] = h_iou
-    hm_iou = _ious * hious
-    cost_matrix = 1 - hm_iou
-    return cost_matrix
-
-
-def w_iou_distance(atracks, btracks):
-    """
-    Compute cost based on IoU
-    :type atracks: list[STrack]
-    :type btracks: list[STrack]
-
-    :rtype cost_matrix np.ndarray
-    """
-
-    if (len(atracks) > 0 and isinstance(atracks[0], np.ndarray)) or (
-            len(btracks) > 0 and isinstance(btracks[0], np.ndarray)):
-        atlbrs = atracks
-        btlbrs = btracks
-    else:
-        atlbrs = [track.tlbr for track in atracks]
-        btlbrs = [track.tlbr for track in btracks]
-    _ious = ious(atlbrs, btlbrs)
-    hious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float)
-    if hious.size != 0:
-        for i in range(len(atlbrs)):
-            for j in range(len(btlbrs)):
-                h_max = max(atlbrs[i][0], btlbrs[j][0])
-                h_min = min(atlbrs[i][0], btlbrs[j][0])
-                h_iou = h_min / h_max
-                hious[i][j] = h_iou
-    hm_iou = _ious * hious
-    cost_matrix = 1 - hm_iou
-    return cost_matrix
-
-
-def wh_displacement_iou_distance(atracks, btracks):
-    """
-    Compute cost based on IoU
-    :type atracks: list[STrack]
-    :type btracks: list[STrack]
-
-    :rtype cost_matrix np.ndarray
-    """
-
-    if (len(atracks) > 0 and isinstance(atracks[0], np.ndarray)) or (
-            len(btracks) > 0 and isinstance(btracks[0], np.ndarray)):
-        atlbrs = atracks
-        btlbrs = btracks
-    else:
-        atlbrs = [track.tlbr for track in atracks]
-        btlbrs = [track.tlbr for track in btracks]
-    _ious = ious(atlbrs, btlbrs)
-
-    axywhs = [track.tlbr_wh for track in atracks]
-    bxywhs = [track.tlbr_wh for track in btracks]
-    wh_ious = ious(axywhs, bxywhs)
-
-    hm_iou = _ious * wh_ious
-    cost_matrix = 1 - hm_iou
-    return cost_matrix
-
-
-def h_displacement_iou_distance(atracks, btracks):
+def displacement_iou_distance(atracks, btracks):
     """
     Compute cost based on IoU
     :type atracks: list[STrack]
@@ -237,83 +127,6 @@ def h_displacement_iou_distance(atracks, btracks):
     return cost_matrix
 
 
-def w_displacement_iou_distance(atracks, btracks):
-    """
-    Compute cost based on IoU
-    :type atracks: list[STrack]
-    :type btracks: list[STrack]
-
-    :rtype cost_matrix np.ndarray
-    """
-
-    if (len(atracks) > 0 and isinstance(atracks[0], np.ndarray)) or (
-            len(btracks) > 0 and isinstance(btracks[0], np.ndarray)):
-        atlbrs = atracks
-        btlbrs = btracks
-    else:
-        atlbrs = [track.tlbr for track in atracks]
-        btlbrs = [track.tlbr for track in btracks]
-    _ious = ious(atlbrs, btlbrs)
-
-    axywhs = [track.xywh for track in atracks]
-    bxywhs = [track.xywh for track in btracks]
-    wious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float)
-    if wious.size != 0:
-        for i in range(len(axywhs)):
-            for j in range(len(bxywhs)):
-                w_1 = abs(axywhs[i][0] - bxywhs[j][0])
-                w_2 = (axywhs[i][2] + bxywhs[j][2]) / 2.0
-                w_iou = w_1 / w_2
-                if w_iou > 1:
-                    w_iou = 1
-                wious[i][j] = 1 - w_iou
-    wm_iou = _ious * wious
-    cost_matrix = 1 - wm_iou
-    return cost_matrix
-
-
-def displacement_iou_distance(atracks, btracks):
-    """
-    Compute cost based on IoU
-    :type atracks: list[STrack]
-    :type btracks: list[STrack]
-
-    :rtype cost_matrix np.ndarray
-    """
-
-    if (len(atracks) > 0 and isinstance(atracks[0], np.ndarray)) or (
-            len(btracks) > 0 and isinstance(btracks[0], np.ndarray)):
-        atlbrs = atracks
-        btlbrs = btracks
-    else:
-        atlbrs = [track.tlbr for track in atracks]
-        btlbrs = [track.tlbr for track in btracks]
-    _ious = ious(atlbrs, btlbrs)
-
-    axywhs = [track.xywh for track in atracks]
-    bxywhs = [track.xywh for track in btracks]
-    d_ious = np.zeros((len(atlbrs), len(btlbrs)), dtype=np.float)
-    if d_ious.size != 0:
-        for i in range(len(axywhs)):
-            for j in range(len(bxywhs)):
-                h_1 = abs(axywhs[i][1] - bxywhs[j][1])
-                h_2 = (axywhs[i][3] + bxywhs[j][3]) / 2.0
-                w_1 = abs(axywhs[i][0] - bxywhs[j][0])
-                w_2 = (axywhs[i][2] + bxywhs[j][2]) / 2.0
-
-                if w_1 > h_1:
-                    d_iou = w_1 / w_2
-                else:
-                    d_iou = h_1 / h_2
-
-                if d_iou > 1:
-                    d_iou = 1
-                d_ious[i][j] = 1 - d_iou
-    dm_iou = _ious * d_ious
-    cost_matrix = 1 - dm_iou
-    return cost_matrix
-
-
 def embedding_distance(tracks, detections, metric='cosine'):
     """
     :param tracks: list[STrack]
@@ -332,28 +145,6 @@ def embedding_distance(tracks, detections, metric='cosine'):
     return cost_matrix
 
 
-def angle_diff_distance(tracks, detections, velocities, previous_obs, vdc_weight):
-    Y, X = speed_direction_batch(detections, previous_obs)
-    inertia_Y, inertia_X = velocities[:, 0], velocities[:, 1]
-    inertia_Y = np.repeat(inertia_Y[:, np.newaxis], Y.shape[1], axis=1)
-    inertia_X = np.repeat(inertia_X[:, np.newaxis], X.shape[1], axis=1)
-    diff_angle_cos = inertia_X * X + inertia_Y * Y
-    diff_angle_cos = np.clip(diff_angle_cos, a_min=-1, a_max=1)
-    diff_angle = np.arccos(diff_angle_cos)
-    diff_angle = (np.pi / 2.0 - np.abs(diff_angle)) / np.pi
-
-    valid_mask = np.ones(previous_obs.shape[0])
-    valid_mask[np.where(previous_obs[:, 4] < 0)] = 0
-
-    scores = np.repeat(np.array([det.score for det in detections])[:, np.newaxis], len(tracks), axis=1)
-    # iou_matrix = iou_matrix * scores # a trick sometiems works, we don't encourage this
-    valid_mask = np.repeat(valid_mask[:, np.newaxis], X.shape[1], axis=1)
-
-    angle_diff_cost = (valid_mask * diff_angle) * vdc_weight
-    angle_diff_cost = angle_diff_cost.T
-    angle_diff_cost = angle_diff_cost * scores
-
-    return angle_diff_cost.T
 
 
 def gate_cost_matrix(kf, cost_matrix, tracks, detections, only_position=False):
@@ -409,18 +200,3 @@ def fuse_score(cost_matrix, detections):
     fuse_cost = 1 - fuse_sim
     return fuse_cost
 
-
-def speed_direction_batch(atracks, btracks):
-    # tracks = tracks[..., np.newaxis]
-    # CX1, CY1 = (dets[:, 0] + dets[:, 2]) / 2.0, (dets[:, 1] + dets[:, 3]) / 2.0
-    # CX2, CY2 = (tracks[:, 0] + tracks[:, 2]) / 2.0, (tracks[:, 1] + tracks[:, 3]) / 2.0
-    btracks = btracks[..., np.newaxis]
-    atlbrs = np.array([track.tlbr for track in atracks])
-    CX1, CY1 = (atlbrs[:, 0] + atlbrs[:, 2]) / 2.0, (atlbrs[:, 1] + atlbrs[:, 3]) / 2.0
-    CX2, CY2 = (btracks[:, 0] + btracks[:, 2]) / 2.0, (btracks[:, 1] + btracks[:, 3]) / 2.0
-    dx = CX1 - CX2
-    dy = CY1 - CY2
-    norm = np.sqrt(dx ** 2 + dy ** 2) + 1e-6
-    dx = dx / norm
-    dy = dy / norm
-    return dy, dx  # size: num_track x num_det
