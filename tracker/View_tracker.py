@@ -286,48 +286,49 @@ class ViewTracker(object):
                 while t > mix_len:
                     r.insert(0, t)
                     t = t * proportion
-                area_range = np.array(r)
-                if area_range[0] > mix_len:
-                    area_range = np.concatenate([np.array([mix_len], ), area_range])
-                    area_range[0] = np.floor(area_range[0])
-                    area_range[-1] = np.ceil(area_range[-1])
+                deep_range = np.array(r)
+                if deep_range[0] > mix_len:
+                    deep_range = np.concatenate([np.array([mix_len], ), deep_range])
+                    deep_range[0] = np.floor(deep_range[0])
+                    deep_range[-1] = np.ceil(deep_range[-1])
             else:
-                area_range = [mix_len, ]
-            mask = self.get_sub_mask(area_range, area)
+                deep_range = [mix_len, ]
+            mask = self.get_sub_mask(deep_range, area)
             # if mode == 1:
             #     mask = mask[::-1]
+
         #  Depth Average Partition for top-view
         else:
             max_len, mix_len = max(depth), min(depth)
             if max_len != mix_len:
-                area_range = np.arange(mix_len, max_len, (max_len - mix_len + 1) / level)
-                if area_range[-1] < max_len:
-                    area_range = np.concatenate([area_range, np.array([max_len], )])
-                    area_range[0] = np.floor(area_range[0])
-                    area_range[-1] = np.ceil(area_range[-1])
+                deep_range = np.arange(mix_len, max_len, (max_len - mix_len + 1) / level)
+                if deep_range[-1] < max_len:
+                    deep_range = np.concatenate([deep_range, np.array([max_len], )])
+                    deep_range[0] = np.floor(deep_range[0])
+                    deep_range[-1] = np.ceil(deep_range[-1])
             else:
-                area_range = [mix_len, ]
-            mask = self.get_sub_mask(area_range, depth)
+                deep_range = [mix_len, ]
+            mask = self.get_sub_mask(deep_range, depth)
         return mask
 
-    def get_area_range(self, obj, step, mode):
+    def get_deep_range_average(self, obj, step, mode):
         col = []
         for t in obj:
-            lend = (t.area_vec)[mode]
+            lend = (t.depth_relation_cue)[mode]
             col.append(lend)
         max_len, mix_len = max(col), min(col)
         if max_len != mix_len:
-            area_range = np.arange(mix_len, max_len, (max_len - mix_len + 1) / step)
-            if area_range[-1] < max_len:
-                area_range = np.concatenate([area_range, np.array([max_len], )])
-                area_range[0] = np.floor(area_range[0])
-                area_range[-1] = np.ceil(area_range[-1])
+            deep_range = np.arange(mix_len, max_len, (max_len - mix_len + 1) / step)
+            if deep_range[-1] < max_len:
+                deep_range = np.concatenate([deep_range, np.array([max_len], )])
+                deep_range[0] = np.floor(deep_range[0])
+                deep_range[-1] = np.ceil(deep_range[-1])
         else:
-            area_range = [mix_len, ]
-        mask = self.get_sub_mask(area_range, col)
+            deep_range = [mix_len, ]
+        mask = self.get_sub_mask(deep_range, col)
         return mask
 
-    def get_area_range_proportion(self, obj, proportion, mode):
+    def get_deep_range_proportion(self, obj, proportion, mode):
         col = []
         for t in obj:
             lend = (t.area_vec)[mode]
@@ -414,16 +415,16 @@ class ViewTracker(object):
 
                 if len(det_) > 0:
                     if not is_high and view_type == 'front':
-                        det__mask = self.get_area_range_proportion(det_, 0.55, 0)
+                        det__mask = self.get_deep_range_proportion(det_, 0.55, 0)
                     else:
-                        det__mask = self.get_area_range_proportion(det_, 0, 0)
+                        det__mask = self.get_deep_range_proportion(det_, 0, 0)
                 else:
                     det__mask = []
                 if len(track_) > 0:
                     if not is_high and view_type == 'front':
-                        track__mask = self.get_area_range_proportion(track_, 0.55, 0)
+                        track__mask = self.get_deep_range_proportion(track_, 0.55, 0)
                     else:
-                        track__mask = self.get_area_range_proportion(track_, 0, 0)
+                        track__mask = self.get_deep_range_proportion(track_, 0, 0)
                 else:
                     track__mask = []
                 u__detection, u__tracks, res__det, res__track = [], [], [], []
