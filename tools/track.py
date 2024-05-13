@@ -26,7 +26,7 @@ timer = Timer()
 
 
 def make_parser():
-    parser = argparse.ArgumentParser("BoT-SORT Tracks For Evaluation!")
+    parser = argparse.ArgumentParser("ViewTrack Tracks For Evaluation!")
 
     parser.add_argument("path", help="path to dataset under evaluation, currently only support MOT17 and MOT20.")
     parser.add_argument("--benchmark", dest="benchmark", type=str, default='MOT17',
@@ -54,10 +54,11 @@ def make_parser():
     parser.add_argument("--track_high_thresh", type=float, default=0.6, help="tracking confidence threshold")
     parser.add_argument("--track_low_thresh", default=0.1, type=float,
                         help="lowest detection threshold valid for tracks")
-    parser.add_argument("--new_track_thresh", default=0.65, type=float, help="new track thresh")
+    parser.add_argument("--new_track_thresh", default=0.7, type=float, help="new track thresh")
     parser.add_argument("--track_buffer", type=int, default=30, help="the frames for keep lost tracks")
-    parser.add_argument("--match_thresh", type=float, default=0.7,
+    parser.add_argument("--match_thresh", type=float, default=0.8,
                         help="matching threshold for tracking(Too low will miss the correct match，Too high to increase false matches)")
+    parser.add_argument('--confirm_thresh', type=float, default=0.7)
     parser.add_argument("--aspect_ratio_thresh", type=float, default=1.6,
                         help="threshold for filtering out boxes of which aspect ratio are above the given value.")
     parser.add_argument('--min_box_area', type=float, default=10, help='filter out tiny boxes')
@@ -72,13 +73,14 @@ def make_parser():
                         type=str, help="reid config file path")
     parser.add_argument("--fast-reid-weights", dest="fast_reid_weights", default=r"pretrained/mot20_sbs_S50.pth",
                         type=str, help="reid config file path")
-    parser.add_argument('--proximity_thresh', type=float, default=0.5)
-    parser.add_argument('--confirm_thresh', type=float, default=0.7)
+    parser.add_argument('--proximity_thresh', type=float, default=0.5, help='threshold for rejecting  low proximity IoU matches')
     parser.add_argument('--appearance_thresh', type=float, default=0.05, help='threshold for rejecting low appearance similarity reid matches')
-    parser.add_argument('--depth_levels', type=int, default=1)
-    parser.add_argument('--depth_levels_low', type=int, default=8)
-    parser.add_argument('--area_proportion', type=float, default=0.55)
-    parser.add_argument('--val_ann', type=str, default='val_half.json')
+
+    # VAPM
+    parser.add_argument('--depth_levels_high', type=int, default=1, help='depth levels for high-score matching')
+    parser.add_argument('--depth_levels_low', type=int, default=8, help='depth levels for low-score matching')
+    parser.add_argument('--area_proportion_high', type=float, default=0, help='area proportion for high-score matching')
+    parser.add_argument('--area_proportion_low', type=float, default=0.55, help='area proportion for low-score matching')
     return parser
 
 
